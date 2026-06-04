@@ -2,7 +2,7 @@ module RemoteArrays
 using Dagger
 using LinearAlgebra
 
-export remote, scopeof, RemoteArray
+export rarray, scopeof, RemoteArray
 
 mutable struct RemoteArray{T, N, A} <: AbstractArray{T, N}
     task::Any
@@ -19,28 +19,30 @@ end
 
 Base.size(ra::RemoteArray) = ra.size
 
+Dagger.memory_space(ra::RemoteArray) = Dagger.memory_space(ra.task)
+
 function scopeof(ra::RemoteArray)
-    space = Dagger.memory_space(ra.task)
-    return scope = UnionScope(map(ExactScope, collect(Dagger.processors(space))))
+    space = Dagger.memory_space(ra)
+    return UnionScope(map(ExactScope, collect(Dagger.processors(space))))
 end
 
 storagetype(::RemoteArray{T, N, A}) where {T, N, A} = A
 storagetype(::Type{<:RemoteArray{T, N, A}}) where {T, N, A} = A
 
-function remote(a::A, options = Dagger.Options()) where {T, N, A <: AbstractArray{T, N}}
+function rarray(a::A, options = Dagger.Options()) where {T, N, A <: AbstractArray{T, N}}
     task = Dagger.spawn(identity, options, a)
     return RemoteArray{T, N, A}(task, size(a))
 end
 
-function remote(a::AbstractArray, proc::Dagger.Processor)
+function rarray(a::AbstractArray, proc::Dagger.Processor)
     scope = ExactScope(proc)
     opts = Dagger.Options(; compute_scope = scope)
-    return remote(a, opts)
+    return rarray(a, opts)
 end
 
-remote(f, dims) = remote(f, Float64, dims)
-function remote(f, ::Type{T}, dims::NTuple{N, Int64}) where {T, N}
-    A = Base.promote_op(f, T, typeof(dims))
+rarray(f, dims) = rarray(f, Float64, dims)
+function rarray(f, ::Type{T}, dims::NTuple{N, Int64}) where {T, N}
+    A = Base.promote_op(f, Type{T}, typeof(dims))
     return RemoteArray{T, N, A}(Dagger.spawn(f, T, dims), dims)
 end
 
@@ -49,7 +51,7 @@ function Base.getindex(ra::RemoteArray, I::Vararg{Int, N}) where {N}
 end
 
 function Base.setindex!(ra::RemoteArray, v, I::Vararg{Int, N}) where {N}
-    Dagger.spawn(setindex!, ra.task, v, I...)
+    ra.task = Dagger.spawn(setindex!, ra.task, v, I...)
     return ra
 end
 
@@ -86,25 +88,26 @@ function LinearAlgebra.mul!(
 end
 
 function Base.show(io::IO, mime::MIME"text/plain", ra::RemoteArray)
+    ready = isready(ra.task)
     n, m = size(ra)
 
     print(io, "$(n)×$(m) $(typeof(ra)) in ")
     ion = IOContext(io, :indent => (get(io, :indent, 0) + 0))
-    if isready(ra.task)
+    if ready
         scope = scopeof(ra)
         print(ion, scope, "\n")
     else
         print(ion, "unknown scope (running):", "\n")
     end
 
-    char = isready(ra.task) ? i -> "✓" : i -> rand(['◒', '◐', '◓', '◑'])
+    char = ready ? () -> "✓" : () -> rand(['◒', '◐', '◓', '◑'])
 
     c = 1
     for i in 1:n
         print(io, "  ")
         for j in 1:m
             print(io, " ")
-            print(io, char(c))
+            print(io, char())
             if j < m
                 print(io, " ")
             end
