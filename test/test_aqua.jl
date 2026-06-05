@@ -1,5 +1,5 @@
-using RemoteArrays: RemoteArrays
 using Aqua: Aqua
+using RemoteArrays: RemoteArrays
 using Test: @testset
 
 @testset "Code quality (Aqua.jl)" begin

@@ -1,5 +1,5 @@
-using RemoteArrays: RemoteArrays
 using Documenter: Documenter, DocMeta, deploydocs, makedocs
+using RemoteArrays: RemoteArrays
 
 DocMeta.setdocmeta!(
     RemoteArrays, :DocTestSetup, :(using RemoteArrays); recursive = true
@@ -14,9 +14,9 @@ makedocs(;
     format = Documenter.HTML(;
         canonical = "https://itensor.github.io/RemoteArrays.jl",
         edit_link = "main",
-        assets = ["assets/favicon.ico", "assets/extras.css"],
+        assets = ["assets/favicon.ico", "assets/extras.css"]
     ),
-    pages = ["Home" => "index.md", "Reference" => "reference.md"],
+    pages = ["Home" => "index.md", "Reference" => "reference.md"]
 )
 
 deploydocs(;

@@ -1,8 +1,8 @@
 [deps]
 RemoteArrays = "0c3dc732-3ae5-4d85-b4e1-0aece693945e"
 
-[sources]
-RemoteArrays = {path = ".."}
+[sources.RemoteArrays]
+path = ".."
 
 [compat]
 RemoteArrays = "0.1"
